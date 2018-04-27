@@ -1,6 +1,7 @@
 const app = require('express')();
-const bodyParser = require('body-parser');
-const multer = require('multer');
+const cors = require('cors');
+const fileUpload = require('express-fileupload');
+const fs = require('fs');
 
 const PORT = 8080;
 
@@ -12,37 +13,34 @@ const server = {
   error: (msg) => console.error(`[SERVER]: (ERR) ! ${msg}`)
 };
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, '/uploaded_audio');
-  },
-  filename: (req, file, cb) => {
-    cb(null, file.originalname + '-' + Date.now()); // TODO: Rename file names.
-    // Do I need to add extension??
+
+app.use(cors());
+
+app.use(fileUpload());
+
+app.post('/audio/upload', (req, res, next) => {
+  server.log('Uploading audio files...');
+  let i = 0;  
+  const files = req.files['audio[]'] || [req.files['audio']];
+  const dirName = 'uploaded_audio/'
+  for (let n = 0; n < files.length; n++) {
+    const file = files[n];
+    const fileName = file.name;
+    const fileBuffer = Buffer.from(file.data);
+    fs.writeFile(dirName + fileName, fileBuffer, 'base64', (err) => {
+      server.log('Uploading file' + fileName);
+      if (err) {
+        server.error(err);
+        res.status(400).send({ error: `Error uploading audio file ${fileName}` });
+      } else {
+        i++;
+        server.log('File ' + fileName + ' saved!');
+        if (n === files.length - 1 && i === files.length - 1) {
+          res.status(200).send('OK');
+        } 
+      };
+    });
   }
-});
-
-const upload = multer({
-  storage, // TODO: Maybe change the destination of the uploaded audio? This could also be a function... check multer docs later
-  fileFilter: (req, file, callback) => {
-
-    // Get file type.
-    const fileType = file.mimetype;
-
-    // Accept only files that include audio filetype.
-    if (fileType.includes('audio/')) {
-      cb(null, true);      
-    } else {
-      server.error('File type is not accepted.'); // TODO: Remove later      
-      cb(null, false);
-    }
-  }
-});
-
-app.use(bodyParser);
-
-app.get('/audio/upload', upload.array('audio'), (req, res, next) => {
-  res.send('OK');
 });
 
 app.listen(PORT, () => {
