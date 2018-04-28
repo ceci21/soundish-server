@@ -3,7 +3,7 @@ const cors = require('cors');
 const fileUpload = require('express-fileupload');
 const fs = require('fs');
 
-const PORT = 8080;
+const PORT = 4444;
 
 // TODO: Change this name later to something more specific.
 // Used for server actions, like logging and such.
@@ -33,14 +33,46 @@ app.post('/audio/upload', (req, res, next) => {
         server.error(err);
         res.status(400).send({ error: `Error uploading audio file ${fileName}` });
       } else {
-        i++;
         server.log('File ' + fileName + ' saved!');
         if (n === files.length - 1 && i === files.length - 1) {
-          res.status(200).send('OK');
-        } 
+          res.status(200).send('OK'); // TODO: Update response message
+        }
+        i++;        
       };
     });
   }
+});
+
+app.get('/audio', (req, res, next) => {
+  console.log('getting audio!!!');
+  const dir = './uploaded_audio/'
+  fs.readdir(dir, (err, fileNames) => {
+    if (err) {
+      return server.error(err);
+    }
+    res.status(200).send(fileNames); // TODO: Update response message
+  });
+});
+
+app.get('/audio/:song_name', (req, res, next) => {
+  const dir = 'uploaded_audio/';
+  const path = dir + req.params.song_name;
+
+
+  fs.readFile(path, 'base64', (err, file) => {
+    res.setHeader('Content-Type', 'audio/mp3');
+    res.send(file);
+  });
+
+  // fs.readFile()
+  // fs.readdir(dir, (err, files) => {
+  //   console.log(files);
+  //   if (err) {
+  //     return server.error(err);
+  //   }
+  //   res.status(200).send(files); // TODO: Update response message
+  // });
+  // res.send('...');
 });
 
 app.listen(PORT, () => {
